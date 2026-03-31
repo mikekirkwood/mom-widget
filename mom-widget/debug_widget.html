@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MoM Widget - Debug Mode</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: sans-serif; margin: 0; padding: 1rem; background: #f5f5f5; }
+    
+    .debug-panel {
+      max-width: 900px;
+      margin: 0 auto 2rem;
+      padding: 1rem;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .debug-panel h2 { margin-top: 0; color: #333; }
+    
+    .status-item {
+      padding: 0.5rem;
+      margin: 0.5rem 0;
+      border-radius: 4px;
+      background: #f8f9fa;
+    }
+    
+    .status-success { color: #2e7d32; font-weight: bold; }
+    .status-error { color: #c62828; font-weight: bold; }
+    .status-warn { color: #f57c00; font-weight: bold; }
+    
+    #widget-container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    #widget-content {
+      min-height: 700px;
+      padding: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="debug-panel">
+    <h2>🔍 Widget Debug Console</h2>
+    
+    <div id="status-output"></div>
+    
+    <h3>Configuration Check:</h3>
+    <div id="config-status"></div>
+    
+    <h3>Supabase Connection Test:</h3>
+    <div id="db-status"></div>
+  </div>
+
+  <div id="widget-container">
+    <div id="widget-content">Loading widget...</div>
+  </div>
+
+  <script>
+    // Configuration from embed.html
+    const SUPABASE_URL = 'https://fuojtoajrhzgfsqzzdtn.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_8V-Xa9KGTfHoQ8IJxnj_2A_IXA-ITtn';
+
+    const BUSINESS_KEYS = {
+      'carpenterhill@eek.com': { name: 'Carpenter Hill', role: 'supplier' },
+      'staplesfarm@eek.com': { name: 'Staples Farm Dairy', role: 'partner' },
+      'creamtop@eek.com': { name: 'Creamtop Creamery', role: 'partner' },
+      'cooks@eek.com': { name: "Cook's Speakeasy", role: 'partner' },
+      'shroomscafe@eek.com': { name: 'Shrooms Cafe', role: 'partner' }
+    };
+
+    // Debug logging functions
+    function logStatus(elementId, message, type = '') {
+      const el = document.getElementById(elementId);
+      if (el) {
+        const div = document.createElement('div');
+        div.className = `status-item ${type}`;
+        div.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
+        el.appendChild(div);
+        console.log(`[${type}]`, message);
+      }
+    }
+
+    // Test 1: Check if Supabase JS loaded
+    logStatus('config-status', 'Checking Supabase library...', '');
+    const supabaseLib = typeof window !== 'undefined' && window.supabase;
+    
+    if (supabaseLib) {
+      logStatus('config-status', '✅ Supabase JS library loaded successfully', 'status-success');
+    } else {
+      logStatus('config-status', '❌ Supabase JS library NOT found in global scope', 'status-error');
+    }
+
+    // Test 2: Validate configuration
+    if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+      logStatus('config-status', '✅ Configuration variables are set', 'status-success');
+    } else {
+      logStatus('config-status', '❌ Missing Supabase credentials in widget code', 'status-error');
+    }
+
+    // Test 3: Try to initialize client
+    let supabaseClient = null;
+    
+    if (supabaseLib && SUPABASE_URL && SUPABASE_ANON_KEY) {
+      logStatus('config-status', 'Attempting to create Supabase client...', '');
+      
+      try {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        logStatus('db-status', '✅ Supabase client created successfully', 'status-success');
+        
+        // Test 4: Make a simple query to check connection
+        logStatus('db-status', 'Testing database connection with simple query...', '');
+        
+        supabaseClient.from('partner_products')
+          .select('count', { count: 'exact', head: true })
+          .then(({ data, error }) => {
+            if (error) {
+              logStatus('db-status', `⚠️ Query returned an error: ${error.message}`, 'status-warn');
+              logStatus('db-status', 'This might be a CORS issue or table permissions problem.', 'status-warn');
+            } else {
+              const count = data?.count || 0;
+              logStatus('db-status', `✅ Database connection successful! Found ${count} products`, 'status-success');
+            }
+          })
+          .catch(err => {
+            logStatus('db-status', `❌ Connection failed: ${err.message}`, 'status-error');
+          });
+
+      } catch (error) {
+        logStatus('config-status', `❌ Failed to create client: ${error.message}`, 'status-error');
+      }
+    } else {
+      logStatus('db-status', '⚠️ Skipping connection test - missing prerequisites', 'status-warn');
+    }
+
+    // Now render the widget UI (same as embed.html)
+    const STATUS_OUTPUT = document.getElementById('status-output');
+    let currentUser = null;
+
+    function showLogin() {
+      logStatus('config-status', 'User clicked "Log In" button', '');
+      document.getElementById('marketing-view').style.display = 'none';
+      document.getElementById('login-view').style.display = 'block';
+    }
+
+    function showRegister() {
+      logStatus('config-status', 'User clicked "Request Access" link', '');
+      document.getElementById('login-view').style.display = 'none';
+      document.getElementById('register-view').style.display = 'block';
+    }
+
+    async function handleLogin(event) {
+      event.preventDefault();
+      const email = document.getElementById('email').value.toLowerCase().trim();
+      
+      logStatus('config-status', `User attempted login with: ${email}`, '');
+      
+      if (!supabaseClient) {
+        alert('Database not initialized. Check the debug console above.');
+        return;
+      }
+
+      let businessInfo = null;
+      for (const [businessEmail, info] of Object.entries(BUSINESS_KEYS)) {
+        if (email === businessEmail) {
+          businessInfo = info;
+          break;
+        }
+      }
+
+      if (!businessInfo) {
+        logStatus('config-status', `❌ Business not found in BUSINESS_KEYS: ${email}`, 'status-error');
+        alert('Business not found. Please contact support.');
+        return;
+      }
+
+      currentUser = { email, ...businessInfo };
+      logStatus('config-status', `✅ Login successful! User: ${currentUser.name} (${currentUser.role})`, 'status-success');
+      
+      showDashboard();
+    }
+
+    function showDashboard() {
+      document.getElementById('login-view').style.display = 'none';
+      document.getElementById('dashboard-view').style.display = 'block';
+      document.getElementById('dashboard-title').textContent = `🏢 ${currentUser.name} - Dashboard`;
+      
+      const content = document.getElementById('dashboard-content');
+      content.innerHTML = '<div class="loading">Loading your dashboard...</div>';
+    }
+
+    function logout() {
+      logStatus('config-status', 'User logged out', '');
+      currentUser = null;
+      document.getElementById('dashboard-view').style.display = 'none';
+      document.getElementById('marketing-view').style.display = 'block';
+      
+      const content = document.getElementById('dashboard-content');
+      content.innerHTML = '';
+    }
+
+    // Render the widget UI
+    function renderWidget() {
+      STATUS_OUTPUT.style.display = 'none';
+      
+      const container = document.getElementById('widget-content');
+      
+      container.innerHTML = `
+        <!-- Marketing View -->
+        <div id="marketing-view" class="marketing-view">
+          <h1>🌱 Join Our Regenerative Local Loop Food Hub</h1>
+          <p>Connect with local farmers, producers, and businesses in our sustainable ecosystem.</p>
+          <button onclick="showLogin()" class="btn">Log In to Your Business Account</button>
+        </div>
+
+        <!-- Login View -->
+        <div id="login-view" class="login-view" style="display: none;">
+          <h2>🔐 Log In to Your Business</h2>
+          <form onsubmit="handleLogin(event)">
+            <div class="form-group">
+              <label for="email">Business Email</label>
+              <input type="email" id="email" required placeholder="your@business.com">
+            </div>
+            <button type="submit" class="btn" style="width: 100%; background: #667eea; color: white;">Log In</button>
+          </form>
+          <p style="margin-top: 1rem; text-align: center; font-size: 0.9rem;">
+            New to the hub? <a href="#" onclick="showRegister()" style="color: #667eea;">Request Business Access</a>
+          </p>
+        </div>
+
+        <!-- Registration View -->
+        <div id="register-view" class="login-view" style="display: none;">
+          <h2>📝 Request Business Access</h2>
+          <form onsubmit="handleRegister(event)">
+            <div class="form-group">
+              <label for="reg-email">Business Email *</label>
+              <input type="email" id="reg-email" required placeholder="your@business.com">
+            </div>
+            <div class="form-group">
+              <label for="business-name">Business Name *</label>
+              <input type="text" id="business-name" required placeholder="Your business name">
+            </div>
+            <div class="form-group">
+              <label for="business-type">Type of Business *</label>
+              <select id="business-type" required>
+                <option value="">Select...</option>
+                <option value="farm">Farm / Agricultural Producer</option>
+                <option value="processor">Food Processor / Manufacturer</option>
+                <option value="retailer">Retailer / Store</option>
+                <option value="restaurant">Restaurant / Food Service</option>
+                <option value="cafe">Cafe / Coffee Shop</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="description">Business Description *</label>
+              <textarea id="description" rows="3" required placeholder="Tell us about your business"></textarea>
+            </div>
+            <button type="submit" class="btn" style="width: 100%; background: #667eea; color: white;">Submit Access Request</button>
+          </form>
+          <p style="margin-top: 1rem; text-align: center; font-size: 0.9rem;">
+            Already have an account? <a href="#" onclick="showLogin()" style="color: #667eea;">Log In Here</a>
+          </p>
+        </div>
+
+        <!-- Dashboard View -->
+        <div id="dashboard-view" class="login-view" style="display: none;">
+          <h2 id="dashboard-title">Dashboard</h2>
+          <button onclick="logout()" class="btn logout-btn" style="background: #ff4757; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer;">Logout</button>
+        </div>
+      `;
+
+      // Add CSS styles for the widget UI
+      const style = document.createElement('style');
+      style.textContent = `
+        .marketing-view { text-align: center; color: white; padding: 2rem; border-radius: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .marketing-view h1 { font-size: 1.8rem; margin-bottom: 0.75rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .marketing-view p { margin-bottom: 1.5rem; opacity: 0.9; font-size: 1rem; }
+        
+        .login-view { background: white; padding: 1.5rem; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); color: #333; }
+        .form-group { margin-bottom: 0.75rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; color: #444; }
+        .form-group input, .form-group select { width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #667eea; }
+        
+        .btn { display: inline-block; padding: 0.5rem 1rem; background: white; color: #667eea; border-radius: 8px; text-decoration: none; font-weight: bold; cursor: pointer; transition: transform 0.2s; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #e0e0e0; }
+        th { background: #f8f9fa; font-weight: 600; color: #444; }
+        
+        .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; }
+        .badge-success { background: #d4edda; color: #155724; }
+        
+        .loading { text-align: center; padding: 2rem; color: #666; }
+      `;
+      
+      document.head.appendChild(style);
+    }
+
+    // Initialize on load
+    window.addEventListener('load', () => {
+      logStatus('config-status', 'Page loaded, initializing widget...', '');
+      renderWidget();
+      logStatus('config-status', '✅ Widget UI rendered successfully!', 'status-success');
+    });
+  </script>
+</body>
+</html>

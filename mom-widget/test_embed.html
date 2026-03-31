@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MoM Widget - Test Embed Page</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 2rem;
+      background: #f5f5f5;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 1rem;
+    }
+
+    .iframe-container {
+      max-width: 900px;
+      margin: 2rem auto;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    iframe {
+      width: 100%;
+      height: 700px; /* Adjust as needed */
+      border: none;
+      display: block;
+    }
+
+    .info-box {
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 1.5rem;
+      background: #e3f2fd;
+      border-radius: 8px;
+      color: #1565c0;
+    }
+
+    .info-box h3 {
+      margin-top: 0;
+    }
+
+    .info-box ul {
+      margin: 0.5rem 0;
+      padding-left: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 MoM Widget Embed Test Page</h1>
+  
+  <div class="info-box">
+    <h3>Testing the embedded widget:</h3>
+    <ul>
+      <li>The iframe should display the full marketing view with a height of ~700px</li>
+      <li>Content should be scrollable if it exceeds the viewport</li>
+      <li>All forms (login, registration) should work properly</li>
+      <li>No horizontal scrolling or layout issues</li>
+    </ul>
+  </div>
+
+  <div class="iframe-container">
+    <!-- This is where you can test different iframe configurations -->
+    <iframe src="embed.html" title="MoM Widget - Regenerative Local Loop Food Hub"></iframe>
+  </div>
+
+  <script>
+    // Simple console log to verify the embed loaded
+    window.addEventListener('load', () => {
+      console.log('Test page loaded successfully!');
+      
+      // Listen for messages from the embedded widget (if you add postMessage support)
+      window.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'MOB_WIDGET_READY') {
+          console.log('MoM Widget is ready:', event);
+        }
+      });
+    });
+
+    // Add keyboard navigation for testing
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        const iframe = document.querySelector('iframe');
+        const win = iframe.contentWindow;
+        if (win && win.document.activeElement?.tagName === 'INPUT') {
+          e.preventDefault();
+          // Simulate arrow key in the iframe context
+          win.focus();
+          win.dispatchEvent(new KeyboardEvent('keydown', {key: e.key, bubbles: true}));
+        }
+      }
+    });
+  </script>
+</body>
+</html>
